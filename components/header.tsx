@@ -32,7 +32,7 @@ export function Header() {
                 </div>
                 <nav className="hidden md:flex items center space-x-8">
                     <Link
-                        href="/producto" className="text-sm font-medium transtion-colors hover:text-primary"
+                        href="/productos" className="text-sm font-medium transtion-colors hover:text-primary"
                     >
 
                         Productos
@@ -44,12 +44,12 @@ export function Header() {
                         Quienes somos
                     </Link>
                     <Link
-                        href="/" className="text-sm font-medium transtion-colors hover:text-primary"
+                        href="/carrito" className="text-sm font-medium transtion-colors hover:text-primary"
                     >
                         Carrito
                     </Link>
                     <Link
-                        href="/" className="text-sm font-medium transtion-colors hover:text-primary"
+                        href="/sign-in" className="text-sm font-medium transtion-colors hover:text-primary"
                     >
 
                         Iniciar sesión
