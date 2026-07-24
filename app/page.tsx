@@ -139,18 +139,21 @@ export default function Home() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <ProductCard
+              id="cocina-esencial"
               name="Cosina Esencial"
               price={429.999}
               imageSrc="/placeholder.svg"
               href="/producto/camiseta-ensecial-1"
             />
             <ProductCard
+              id="comedor-monaco"
               name="Comedor monaco"
               price={600.000}
               imageSrc="/placeholder.svg"
               href="/producto/camiseta-ensecial-1"
             />
             <ProductCard
+              id="recibidor-esencial"
               name="Recibidor Esencial"
               price={135800}
               imageSrc="/placeholder.svg"

@@ -147,6 +147,7 @@ export default async function ProductosPage({
                                 {products.map((product) => (
                                     <ProductCard
                                         key={product.id}
+                                        id={product.documentId}
                                         name={product.name}
                                         price={product.price}
                                         imageSrc={getStrapiImageUrl(product.image, "medium")}
