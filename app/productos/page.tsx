@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { ChevronRight, X } from "lucide-react";
-
 import { ProductCard } from "@/components/product-card";
 import { SortSelect } from "@/components/sort-select";
-
 import { getProducts, getCategories, getStrapiImageUrl } from "@/lib/strapi";
 
 export default async function ProductosPage({
