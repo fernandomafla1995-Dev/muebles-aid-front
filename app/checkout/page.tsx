@@ -130,17 +130,28 @@ export default function CheckoutPage() {
                 //redirectUrl: `${window.location.origin}/gracias?ref=${reference}`,
             });
 
-            checkout.open((result: any) => {
-                setIsSubmitting(false);
+            checkout.open(async (result: any) => {
                 const transaction = result.transaction;
 
-                if (transaction?.status === "APPROVED") {
-                    router.push(`/gracias?ref=${reference}`);
-                } else {
-                    setError(
-                        "El pago no se completó. Puedes intentarlo de nuevo.",
-                    );
+                // Actualizamos el estado en Strapi de inmediato (mejor esfuerzo).
+                // No bloqueamos la redirección si esto falla — /gracias siempre
+                // muestra el estado real leído directamente de Strapi.
+                try {
+                    await fetch("/api/pedidos/confirmar-pago", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            reference,
+                            wompiStatus: transaction?.status,
+                            wompiTransactionId: transaction?.id,
+                        }),
+                    });
+                } catch (e) {
+                    console.error("No se pudo confirmar el pago con el backend:", e);
                 }
+
+                setIsSubmitting(false);
+                router.push(`/gracias?ref=${reference}`);
             });
         } catch (err) {
             console.error(err);

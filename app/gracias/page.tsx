@@ -1,210 +1,236 @@
-import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle, Package, Truck, ArrowRight } from "lucide-react";
+import {
+    CheckCircle,
+    Clock,
+    XCircle,
+    Package,
+    Truck,
+    ArrowRight,
+    AlertTriangle,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { getPedidoByReference } from "@/lib/strapi";
+import { formatCOP } from "@/lib/format";
 
-// Página de agradecimiento/confirmación de compra
-export default function ThankYouPage() {
-  // En una implementación real, estos datos vendrían de la sesión o de la API
-  const orderNumber = "ORD-2023-5678";
-  const orderDate = "12 de mayo de 2023";
-  const estimatedDelivery = "15-18 de mayo de 2023";
+const ESTADO_INFO: Record<string, { label: string; color: string }> = {
+    pendiente_pago: { label: "Pendiente de pago", color: "text-amber-600" },
+    pagado: { label: "Pago confirmado", color: "text-green-600" },
+    en_produccion: { label: "En producción", color: "text-green-600" },
+    listo_despacho: { label: "Listo para despacho", color: "text-green-600" },
+    enviado: { label: "Enviado", color: "text-green-600" },
+    entregado: { label: "Entregado", color: "text-green-600" },
+    cancelado: { label: "Cancelado", color: "text-red-600" },
+    reembolsado: { label: "Reembolsado", color: "text-red-600" },
+};
 
-  const orderItems = [
-    {
-            id: 1,
-            name: "Mesa de noche basica",
-            price: 200.0,
-            imageSrc: "/placeholder.svg",
-            quantity: 1,
-            href: "/producto/Mesa-noche1"
-        },
-        {
-            id: 2,
-            name: "Mesa de noche premiun",
-            price: 400.0,
-            imageSrc: "/placeholder.svg",
-            quantity: 2,
-            href: "/producto/Mesa-noche-premiun"
-        },
-        {
-            id: 3,
-            name: "cosina integral basica",
-            price: 1000.0,
-            imageSrc: "/placeholder.svg",
-            quantity: 3,
-            href: "/producto/cocina-integral-b"
-        },
-        {
-            id: 4,
-            name: "cosina integral premiun",
-            price: 2000.0,
-            imageSrc: "/placeholder.svg",
-            quantity: 1,
-            href: "/producto/cocina-integral-premiun"        
-    },
-  ];
+const PASOS = ["pagado", "en_produccion", "listo_despacho", "enviado"];
+const PASOS_ICONOS = [CheckCircle, Package, Package, Truck];
+const PASOS_LABELS = ["Pago confirmado", "En producción", "Listo despacho", "Enviado"];
 
-  // Cálculo de subtotal
-  const subtotal = orderItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
-  );
+export default async function ThankYouPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ ref?: string }>;
+}) {
+    const { ref } = await searchParams;
+    const pedido = ref ? await getPedidoByReference(ref) : null;
 
-  // Gastos de envío (gratis a partir de 50€)
-  const shipping = subtotal >= 50 ? 0 : 4.99;
-
-  // Total
-  const total = subtotal + shipping;
-
-  return (
-    <main className="flex flex-col min-h-screen">
-      <div className="container px-4 py-12 md:px-6 max-w-4xl mx-auto">
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-            <CheckCircle className="h-8 w-8 text-green-600" />
-          </div>
-          <h1 className="text-3xl font-bold mb-2">¡Gracias por tu compra!</h1>
-          <p className="text-gray-600">
-            Tu pedido ha sido recibido y está siendo procesado.
-          </p>
-        </div>
-
-        <div className="border rounded-lg overflow-hidden mb-8">
-          {/* Información del pedido */}
-          <div className="bg-gray-50 p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <h2 className="text-sm font-medium text-gray-500 mb-1">
-                  Número de pedido
-                </h2>
-                <p className="font-medium">{orderNumber}</p>
-              </div>
-              <div>
-                <h2 className="text-sm font-medium text-gray-500 mb-1">
-                  Fecha del pedido
-                </h2>
-                <p className="font-medium">{orderDate}</p>
-              </div>
-              <div>
-                <h2 className="text-sm font-medium text-gray-500 mb-1">
-                  Entrega estimada
-                </h2>
-                <p className="font-medium">{estimatedDelivery}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Detalles del pedido */}
-          <div className="p-6">
-            <h2 className="text-lg font-medium mb-4">Detalles del pedido</h2>
-
-            <div className="space-y-4 mb-6">
-              {orderItems.map((item) => (
-                <div key={item.id} className="flex gap-4">
-                  <div className="w-16 h-16 flex-shrink-0">
-                    <Image
-                      src={item.image || "/placeholder.svg"}
-                      alt={item.name}
-                      width={64}
-                      height={64}
-                      className="rounded-md object-cover w-full h-full"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-medium">{item.name}</h3>
-                    <p className="text-sm text-gray-500">
-                      {item.color}, {item.size} x {item.quantity}
+    // No encontramos el pedido (referencia inválida, o aún no se creó del todo)
+    if (!pedido) {
+        return (
+            <main className="flex flex-col min-h-screen">
+                <div className="container px-4 py-12 md:px-6 max-w-2xl mx-auto text-center">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 mb-4">
+                        <AlertTriangle className="h-8 w-8 text-amber-600" />
+                    </div>
+                    <h1 className="text-3xl font-bold mb-2">
+                        No pudimos confirmar tu pedido
+                    </h1>
+                    <p className="text-gray-600 mb-8">
+                        Si realizaste un pago, no te preocupes — puede que esté
+                        procesándose todavía. Revisa el estado desde tu cuenta o
+                        contáctanos si tienes dudas.
                     </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">
-                      ${(item.price * item.quantity).toFixed(2)}
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                        <Button asChild>
+                            <Link href="/mi-cuenta/pedidos">Ver mis pedidos</Link>
+                        </Button>
+                        <Button variant="outline" asChild>
+                            <Link href="/">Volver al inicio</Link>
+                        </Button>
+                    </div>
+                </div>
+            </main>
+        );
+    }
+
+    const estadoInfo = ESTADO_INFO[pedido.estado] ?? {
+        label: pedido.estado,
+        color: "text-gray-600",
+    };
+    const esRechazado = pedido.estado === "cancelado" || pedido.estado === "reembolsado";
+    const esPendiente = pedido.estado === "pendiente_pago";
+    const pasoActualIndex = PASOS.indexOf(pedido.estado);
+
+    const fechaPedido = new Date(pedido.createdAt).toLocaleDateString("es-CO", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+    });
+
+    return (
+        <main className="flex flex-col min-h-screen">
+            <div className="container px-4 py-12 md:px-6 max-w-4xl mx-auto">
+                <div className="text-center mb-12">
+                    <div
+                        className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
+                            esRechazado ? "bg-red-100" : esPendiente ? "bg-amber-100" : "bg-green-100"
+                        }`}
+                    >
+                        {esRechazado ? (
+                            <XCircle className="h-8 w-8 text-red-600" />
+                        ) : esPendiente ? (
+                            <Clock className="h-8 w-8 text-amber-600" />
+                        ) : (
+                            <CheckCircle className="h-8 w-8 text-green-600" />
+                        )}
+                    </div>
+                    <h1 className="text-3xl font-bold mb-2">
+                        {esRechazado
+                            ? "Tu pedido no se completó"
+                            : esPendiente
+                              ? "Estamos confirmando tu pago"
+                              : "¡Gracias por tu compra!"}
+                    </h1>
+                    <p className="text-gray-600">
+                        {esPendiente
+                            ? "Esto puede tardar unos minutos. Actualiza esta página en breve para ver el estado más reciente."
+                            : esRechazado
+                              ? "Si crees que esto es un error, contáctanos con tu número de referencia."
+                              : "Tu pedido ha sido recibido y está siendo procesado."}
                     </p>
-                    <p className="text-sm text-gray-500">
-                      ${item.price.toFixed(2)} por unidad
-                    </p>
-                  </div>
                 </div>
-              ))}
-            </div>
 
-            <Separator />
+                <div className="border rounded-lg overflow-hidden mb-8">
+                    <div className="bg-gray-50 p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <h2 className="text-sm font-medium text-gray-500 mb-1">
+                                    Número de pedido
+                                </h2>
+                                <p className="font-medium">
+                                    {pedido.wompiReference ?? pedido.documentId}
+                                </p>
+                            </div>
+                            <div>
+                                <h2 className="text-sm font-medium text-gray-500 mb-1">
+                                    Fecha del pedido
+                                </h2>
+                                <p className="font-medium">{fechaPedido}</p>
+                            </div>
+                            <div>
+                                <h2 className="text-sm font-medium text-gray-500 mb-1">
+                                    Estado actual
+                                </h2>
+                                <p className={`font-medium ${estadoInfo.color}`}>
+                                    {estadoInfo.label}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
-            {/* Resumen de costos */}
-            <div className="space-y-2 py-4">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Envío</span>
-                <span>
-                  {shipping === 0 ? "Gratis" : `$${shipping.toFixed(2)}`}
-                </span>
-              </div>
-              <div className="flex justify-between font-medium text-lg pt-2">
-                <span>Total</span>
-                <span>${total.toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+                    <div className="p-6">
+                        <h2 className="text-lg font-medium mb-4">Detalles del pedido</h2>
 
-        {/* Estado del pedido */}
-        <div className="border rounded-lg p-6 mb-8">
-          <h2 className="text-lg font-medium mb-6">Estado del pedido</h2>
+                        <div className="space-y-4 mb-6">
+                            {pedido.items.map((item) => (
+                                <div key={item.id} className="flex gap-4">
+                                    <div className="flex-1">
+                                        <h3 className="font-medium">{item.nombreProducto}</h3>
+                                        <p className="text-sm text-gray-500">
+                                            Cantidad: {item.cantidad}
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="font-medium">
+                                            {formatCOP(item.precioUnitario * item.cantidad)}
+                                        </p>
+                                        <p className="text-sm text-gray-500">
+                                            {formatCOP(item.precioUnitario)} por unidad
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
 
-          <div className="relative">
-            {/* Línea de progreso */}
-            <div className="absolute top-5 left-5 right-5 h-0.5 bg-gray-200">
-              <div className="absolute top-0 left-0 h-0.5 bg-green-500 w-1/3"></div>
-            </div>
+                        <Separator />
 
-            {/* Pasos */}
-            <div className="grid grid-cols-3 relative">
-              <div className="text-center">
-                <div className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center mx-auto mb-2 relative z-10">
-                  <CheckCircle className="h-5 w-5" />
+                        <div className="space-y-2 py-4">
+                            <div className="flex justify-between">
+                                <span className="text-gray-600">Subtotal</span>
+                                <span>{formatCOP(pedido.subtotal)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-600">Envío</span>
+                                <span>{pedido.envio === 0 ? "Gratis" : formatCOP(pedido.envio)}</span>
+                            </div>
+                            <div className="flex justify-between font-medium text-lg pt-2">
+                                <span>Total</span>
+                                <span>{formatCOP(pedido.total)}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <h3 className="font-medium text-sm">Pedido confirmado</h3>
-                <p className="text-xs text-gray-500">{orderDate}</p>
-              </div>
 
-              <div className="text-center">
-                <div className="w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center mx-auto mb-2 relative z-10">
-                  <Package className="h-5 w-5" />
-                </div>
-                <h3 className="font-medium text-sm">Preparando pedido</h3>
-                <p className="text-xs text-gray-500">En proceso</p>
-              </div>
+                {pasoActualIndex >= 0 && (
+                    <div className="border rounded-lg p-6 mb-8">
+                        <h2 className="text-lg font-medium mb-6">Estado del pedido</h2>
+                        <div className="relative">
+                            <div className="absolute top-5 left-5 right-5 h-0.5 bg-gray-200">
+                                <div
+                                    className="absolute top-0 left-0 h-0.5 bg-green-500"
+                                    style={{
+                                        width: `${(pasoActualIndex / (PASOS.length - 1)) * 100}%`,
+                                    }}
+                                />
+                            </div>
+                            <div className="grid grid-cols-4 relative">
+                                {PASOS_LABELS.map((label, i) => {
+                                    const Icon = PASOS_ICONOS[i];
+                                    return (
+                                        <div className="text-center" key={label}>
+                                            <div
+                                                className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 relative z-10 ${
+                                                    i <= pasoActualIndex
+                                                        ? "bg-green-500 text-white"
+                                                        : "bg-gray-200 text-gray-500"
+                                                }`}
+                                            >
+                                                <Icon className="h-5 w-5" />
+                                            </div>
+                                            <h3 className="font-medium text-sm">{label}</h3>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
-              <div className="text-center">
-                <div className="w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center mx-auto mb-2 relative z-10">
-                  <Truck className="h-5 w-5" />
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <Button asChild>
+                        <Link href="/mi-cuenta/pedidos">Ver mis pedidos</Link>
+                    </Button>
+                    <Button variant="outline" asChild>
+                        <Link href="/">
+                            Continuar comprando
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                    </Button>
                 </div>
-                <h3 className="font-medium text-sm">Enviado</h3>
-                <p className="text-xs text-gray-500">Pendiente</p>
-              </div>
             </div>
-          </div>
-        </div>
-
-        {/* Acciones */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Button asChild>
-            <Link href="/mi-cuenta/pedidos">Ver mis pedidos</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/">
-              Continuar comprando
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-      </div>
-    </main>
-  );
+        </main>
+    );
 }

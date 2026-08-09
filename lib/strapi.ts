@@ -309,3 +309,90 @@ export async function crearPedidoPendiente(input: CrearPedidoInput) {
     const json = await res.json();
     return json.data;
 }
+export interface StrapiPedidoItem {
+    id: number;
+    nombreProducto: string;
+    precioUnitario: number;
+    cantidad: number;
+}
+
+export interface StrapiPedido {
+    id: number;
+    documentId: string;
+    subtotal: number;
+    envio: number;
+    total: number;
+    estado: string;
+    wompiReference: string | null;
+    wompiTransactionId: string | null;
+    createdAt: string;
+    items: StrapiPedidoItem[];
+    direccionEnvio: {
+        nombreCompleto: string;
+        telefono: string;
+        direccion: string;
+        ciudad: string;
+        notas: string | null;
+    } | null;
+    historialEstados: {
+        estado: string;
+        fecha: string;
+        nota: string;
+    }[];
+}
+
+// Trae un pedido por su documentId (usado como referencia de Wompi)
+export async function getPedidoByReference(reference: string): Promise<StrapiPedido | null> {
+    try {
+        const json = await strapiFetch<StrapiSingleResponse<StrapiPedido>>(
+            `/pedidos/${reference}?populate=*`,
+        );
+        return json.data;
+    } catch (error) {
+        console.error("Error al traer pedido desde Strapi:", error);
+        return null;
+    }
+}
+
+// Trae todos los pedidos de un cliente, por su clerkUserId, del más reciente al más antiguo
+export async function getPedidosByClerkUserId(clerkUserId: string): Promise<StrapiPedido[]> {
+    try {
+        const clientes = await strapiFetch<StrapiListResponse<{ id: number }>>(
+            `/clientes?filters[clerkUserId][$eq]=${clerkUserId}`,
+        );
+        if (clientes.data.length === 0) return [];
+
+        const clienteId = clientes.data[0].id;
+        const json = await strapiFetch<StrapiListResponse<StrapiPedido>>(
+            `/pedidos?filters[cliente][id][$eq]=${clienteId}&populate=*&sort=createdAt:desc`,
+        );
+        return json.data;
+    } catch (error) {
+        console.error("Error al traer pedidos del cliente:", error);
+        return [];
+    }
+}
+
+// Actualiza el estado de un pedido (llamado al confirmar el resultado del widget de Wompi)
+export async function actualizarEstadoPedido(
+    reference: string,
+    nuevoEstado: string,
+    wompiTransactionId?: string,
+): Promise<boolean> {
+    try {
+        const res = await fetch(`${STRAPI_URL}/api/pedidos/${reference}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                data: {
+                    estado: nuevoEstado,
+                    ...(wompiTransactionId ? { wompiTransactionId } : {}),
+                },
+            }),
+        });
+        return res.ok;
+    } catch (error) {
+        console.error("Error al actualizar estado del pedido:", error);
+        return false;
+    }
+}
