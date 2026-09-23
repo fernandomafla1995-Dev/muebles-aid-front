@@ -1,3 +1,5 @@
+import { consultarTransaccionWompi, traducirEstadoWompi } from "@/lib/wompi";
+import { actualizarEstadoPedido, getPedidoByReference } from "@/lib/strapi";
 import Link from "next/link";
 import {
     CheckCircle,
@@ -11,11 +13,11 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { getPedidoByReference } from "@/lib/strapi";
 import { formatCOP } from "@/lib/format";
 
 const ESTADO_INFO: Record<string, { label: string; color: string }> = {
     pendiente_pago: { label: "Pendiente de pago", color: "text-amber-600" },
+    en_verificacion: { label: "Verificando tu pago", color: "text-amber-600" },
     pagado: { label: "Pago confirmado", color: "text-green-600" },
     en_produccion: { label: "En producción", color: "text-green-600" },
     listo_despacho: { label: "Listo para despacho", color: "text-green-600" },
@@ -29,13 +31,33 @@ const PASOS = ["pagado", "en_produccion", "listo_despacho", "enviado"];
 const PASOS_ICONOS = [CheckCircle, Package, Package, Truck];
 const PASOS_LABELS = ["Pago confirmado", "En producción", "Listo despacho", "Enviado"];
 
+const ESTADOS_NO_FINALES = ["pendiente_pago", "en_verificacion"];
+
 export default async function ThankYouPage({
     searchParams,
 }: {
-    searchParams: Promise<{ ref?: string }>;
+    searchParams: Promise<{ ref?: string; id?: string }>;
 }) {
-    const { ref } = await searchParams;
-    const pedido = ref ? await getPedidoByReference(ref) : null;
+    const { ref, id } = await searchParams;
+    let pedido = ref ? await getPedidoByReference(ref) : null;
+
+    // Si el pedido sigue en un estado no-final y tenemos el id de transacción
+    // de Wompi (viene en la URL cuando Wompi redirige tras PSE/Nequi/Bancolombia),
+    // consultamos activamente el estado real — esto resuelve el caso donde el
+    // webhook aún no ha llegado o tardó más de lo esperado.
+    if (pedido && ESTADOS_NO_FINALES.includes(pedido.estado)) {
+        const transactionId = id ?? pedido.wompiTransactionId ?? null;
+
+        if (transactionId) {
+            const transaccion = await consultarTransaccionWompi(transactionId);
+            const nuevoEstado = transaccion ? traducirEstadoWompi(transaccion.status) : null;
+
+            if (nuevoEstado && nuevoEstado !== pedido.estado) {
+                await actualizarEstadoPedido(ref!, nuevoEstado, transaccion!.id);
+                pedido = await getPedidoByReference(ref!); // releer el estado ya actualizado
+            }
+        }
+    }
 
     // No encontramos el pedido (referencia inválida, o aún no se creó del todo)
     if (!pedido) {
@@ -71,7 +93,7 @@ export default async function ThankYouPage({
         color: "text-gray-600",
     };
     const esRechazado = pedido.estado === "cancelado" || pedido.estado === "reembolsado";
-    const esPendiente = pedido.estado === "pendiente_pago";
+    const esPendiente = pedido.estado === "pendiente_pago" || pedido.estado === "en_verificacion";
     const pasoActualIndex = PASOS.indexOf(pedido.estado);
 
     const fechaPedido = new Date(pedido.createdAt).toLocaleDateString("es-CO", {
@@ -85,9 +107,8 @@ export default async function ThankYouPage({
             <div className="container px-4 py-12 md:px-6 max-w-4xl mx-auto">
                 <div className="text-center mb-12">
                     <div
-                        className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
-                            esRechazado ? "bg-red-100" : esPendiente ? "bg-amber-100" : "bg-green-100"
-                        }`}
+                        className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${esRechazado ? "bg-red-100" : esPendiente ? "bg-amber-100" : "bg-green-100"
+                            }`}
                     >
                         {esRechazado ? (
                             <XCircle className="h-8 w-8 text-red-600" />
@@ -101,15 +122,15 @@ export default async function ThankYouPage({
                         {esRechazado
                             ? "Tu pedido no se completó"
                             : esPendiente
-                              ? "Estamos confirmando tu pago"
-                              : "¡Gracias por tu compra!"}
+                                ? "Estamos confirmando tu pago"
+                                : "¡Gracias por tu compra!"}
                     </h1>
                     <p className="text-gray-600">
                         {esPendiente
                             ? "Esto puede tardar unos minutos. Actualiza esta página en breve para ver el estado más reciente."
                             : esRechazado
-                              ? "Si crees que esto es un error, contáctanos con tu número de referencia."
-                              : "Tu pedido ha sido recibido y está siendo procesado."}
+                                ? "Si crees que esto es un error, contáctanos con tu número de referencia."
+                                : "Tu pedido ha sido recibido y está siendo procesado."}
                     </p>
                 </div>
 
@@ -202,11 +223,10 @@ export default async function ThankYouPage({
                                     return (
                                         <div className="text-center" key={label}>
                                             <div
-                                                className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 relative z-10 ${
-                                                    i <= pasoActualIndex
+                                                className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 relative z-10 ${i <= pasoActualIndex
                                                         ? "bg-green-500 text-white"
                                                         : "bg-gray-200 text-gray-500"
-                                                }`}
+                                                    }`}
                                             >
                                                 <Icon className="h-5 w-5" />
                                             </div>

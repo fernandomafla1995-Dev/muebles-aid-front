@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Image from "next/image";
 import { Star, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -93,14 +94,16 @@ export default async function Home() {
                 </div>
               ))}
 
-              {/* Botón de compra */}
+              {/* Botón para ver mas productos */}
               <div className="flex justify-end mt-6">
-                <Button className="rounded-full px-6 bg-black text-white hover:bg-gray-900 flex items-center gap-2">
-                  Ver mas productos
-                  <div>
-                    <ChevronRight className="w-4 h-4 text-white" />
-                  </div>
-                </Button>
+                <Link href="/productos">
+                  <Button className="rounded-full px-6 bg-black text-white hover:bg-gray-900 flex items-center gap-2">
+                    Ver más productos
+                    <div>
+                      <ChevronRight className="w-4 h-4 text-white" />
+                    </div>
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>

@@ -19,12 +19,15 @@ export async function POST(req: NextRequest) {
             wompiStatus === "APPROVED"
                 ? "pagado"
                 : wompiStatus === "DECLINED" || wompiStatus === "ERROR" || wompiStatus === "VOIDED"
-                  ? "cancelado"
-                  : null;
+                    ? "cancelado"
+                    : wompiStatus === "PENDING"
+                        ? "en_verificacion"
+                        : null;
 
-        // Si el estado es PENDING (algunos métodos como PSE tardan), no tocamos
-        // el pedido — se queda en pendiente_pago hasta que el webhook lo confirme
+        // null solo ocurre si Wompi nos manda un status que no reconocemos —
+        // en ese caso preferimos no tocar el pedido antes que asumir algo incorrecto
         if (!nuevoEstado) {
+            console.warn(`Status de Wompi no reconocido: ${wompiStatus}`);
             return NextResponse.json({ ok: true, actualizado: false });
         }
 

@@ -45,11 +45,6 @@ export function Header({ logoUrl }: HeaderProps) {
                             Productos
                         </Link>
                         <Link
-                            href="/carrito" className="text-sm font-medium transtion-colors hover:text-primary"
-                        >
-                            Carrito
-                        </Link>
-                        <Link
                             href="/ofertas" className="text-sm font-medium transtion-colors hover:text-primary"
                         >
                             Ofertas
@@ -80,7 +75,7 @@ export function Header({ logoUrl }: HeaderProps) {
                                     className="hidden md:flex"
                                     asChild
                                 >
-                                    <Link href="/mi-cuenta">
+                                    <Link href="mi-cuenta/pedidos">
                                         <Package className="h-5 w-5" />
                                         <span className="sr-only">Mi Pedidos</span>
                                     </Link>

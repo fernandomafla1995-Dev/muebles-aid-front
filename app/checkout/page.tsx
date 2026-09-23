@@ -127,7 +127,7 @@ export default function CheckoutPage() {
                 reference,
                 publicKey,
                 signature: { integrity: signature },
-                //redirectUrl: `${window.location.origin}/gracias?ref=${reference}`,
+                redirectUrl: `${window.location.origin}/gracias?ref=${reference}`,
             });
 
             checkout.open(async (result: any) => {

@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-};
-
+  allowedDevOrigins: [
+    "distract-verbose-ethically.ngrok-free.dev",
+  ],
+}; 
 export default nextConfig;
