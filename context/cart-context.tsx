@@ -9,12 +9,14 @@ import {
 } from "react";
 
 export interface CartItem {
-    id: string; // usa el documentId o slug del producto — debe ser único
+    id: string; // documentId del producto, o `${documentId}-${color}` si tiene color
     name: string;
     price: number;
     imageSrc: string;
     href: string;
     quantity: number;
+    color?: string;
+    stock?: number; // máximo disponible — si no se pasa, no se limita
 }
 
 interface CartContextType {
@@ -33,7 +35,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const [items, setItems] = useState<CartItem[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    // Al montar, recupera el carrito guardado (si existe) desde localStorage
     useEffect(() => {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -46,7 +47,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setIsLoaded(true);
     }, []);
 
-    // Cada vez que cambian los items, los persiste en localStorage
     useEffect(() => {
         if (isLoaded) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
@@ -57,13 +57,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setItems((prev) => {
             const existing = prev.find((i) => i.id === newItem.id);
             if (existing) {
+                const maxQty = existing.stock ?? Infinity;
+                const nuevaCantidad = Math.min(
+                    existing.quantity + quantity,
+                    maxQty,
+                );
                 return prev.map((i) =>
-                    i.id === newItem.id
-                        ? { ...i, quantity: i.quantity + quantity }
-                        : i,
+                    i.id === newItem.id ? { ...i, quantity: nuevaCantidad } : i,
                 );
             }
-            return [...prev, { ...newItem, quantity }];
+            const maxQty = newItem.stock ?? Infinity;
+            return [...prev, { ...newItem, quantity: Math.min(quantity, maxQty) }];
         });
     }
 
@@ -74,7 +78,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     function updateQuantity(id: string, quantity: number) {
         if (quantity < 1) return;
         setItems((prev) =>
-            prev.map((i) => (i.id === id ? { ...i, quantity } : i)),
+            prev.map((i) => {
+                if (i.id !== id) return i;
+                const maxQty = i.stock ?? Infinity;
+                return { ...i, quantity: Math.min(quantity, maxQty) };
+            }),
         );
     }
 

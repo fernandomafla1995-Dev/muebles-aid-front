@@ -145,6 +145,10 @@ export default function CartPage() {
                                                             item.quantity + 1,
                                                         )
                                                     }
+                                                    disabled={
+                                                        item.stock !== undefined &&
+                                                        item.quantity >= item.stock
+                                                    }
                                                 >
                                                     <Plus className="h-3 w-3" />
                                                     <span className="sr-only">

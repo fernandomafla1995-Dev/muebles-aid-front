@@ -15,27 +15,30 @@ export function ProductCard({
     price,
     imageSrc,
     href,
+    stock,
 }: {
     id: string;
     name: string;
     price: number;
     imageSrc: string;
     href?: string;
+    stock?: number;
 }) {
     const { addItem } = useCart();
     const [added, setAdded] = useState(false);
 
+    const sinStock = stock === 0;
+
     function handleAddToCart(e: React.MouseEvent) {
-        // Evita que el clic en el botón también dispare la navegación
-        // del <Link> que envuelve toda la tarjeta
         e.preventDefault();
         e.stopPropagation();
 
-        addItem({ id, name, price, imageSrc, href: href ?? "#" });
+        if (sinStock) return;
 
-        // Feedback visual breve: el ícono cambia a un check por 1.5s
+        addItem({ id, name, price, imageSrc, href: href ?? "#", stock });
+
         setAdded(true);
-        setTimeout(() => setAdded(false), 1500);
+        setTimeout(() => setAdded(false), 2000);
     }
 
     const card = (
@@ -52,6 +55,7 @@ export function ProductCard({
                     size="icon"
                     variant="secondary"
                     onClick={handleAddToCart}
+                    disabled={sinStock}
                     className="absolute bottom-2 right-2 h-8 w-8 rounded-full z-20"
                 >
                     {added ? (
@@ -65,6 +69,9 @@ export function ProductCard({
             <div className="p-4">
                 <h3 className="font-medium">{name}</h3>
                 <p className="font-bold mt-1">{formatCOP(price)}</p>
+                {sinStock && (
+                    <p className="text-xs text-red-500 mt-1">Agotado</p>
+                )}
             </div>
         </div>
     );

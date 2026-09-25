@@ -35,8 +35,10 @@ export interface StrapiProduct {
     description: string;
     price: number;
     originalPrice: number | null;
-    colors: string[];
+    color: string | null;
+    grupoVariante: string | null;
     stock: number;
+    medidas: string | null;
     featured: boolean;
     image: StrapiImage | null;
     images: StrapiImage[] | null;
@@ -395,4 +397,16 @@ export async function actualizarEstadoPedido(
         console.error("Error al actualizar estado del pedido:", error);
         return false;
     }
+}
+// Trae los demás colores del mismo mueble (mismo grupoVariante), excluyendo el actual
+export async function getVariantesDelGrupo(
+    grupoVariante: string,
+    slugActual: string,
+): Promise<StrapiProduct[]> {
+    if (!grupoVariante) return [];
+
+    const json = await strapiFetch<StrapiListResponse<StrapiProduct>>(
+        `/products?filters[grupoVariante][$eq]=${grupoVariante}&populate=*`,
+    );
+    return json.data.filter((p) => p.slug !== slugActual);
 }

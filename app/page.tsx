@@ -127,6 +127,7 @@ export default async function Home() {
                 price={product.price}
                 imageSrc={getStrapiImageUrl(product.image, "medium")}
                 href={`/producto/${product.slug}`}
+                 stock={product.stock}
               />
             ))}
           </div>
