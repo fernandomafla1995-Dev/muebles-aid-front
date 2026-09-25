@@ -1,5 +1,6 @@
 import { consultarTransaccionWompi, traducirEstadoWompi } from "@/lib/wompi";
 import { actualizarEstadoPedido, getPedidoByReference } from "@/lib/strapi";
+import { ClearCartOnSuccess } from "@/components/clear-cart-on-success";
 import Link from "next/link";
 import {
     CheckCircle,
@@ -104,6 +105,7 @@ export default async function ThankYouPage({
 
     return (
         <main className="flex flex-col min-h-screen">
+            <ClearCartOnSuccess estado={pedido.estado} />
             <div className="container px-4 py-12 md:px-6 max-w-4xl mx-auto">
                 <div className="text-center mb-12">
                     <div

@@ -5,18 +5,20 @@ import {
     useContext,
     useState,
     useEffect,
+    useCallback,
+    useMemo,
     ReactNode,
 } from "react";
 
 export interface CartItem {
-    id: string; // documentId del producto, o `${documentId}-${color}` si tiene color
+    id: string;
     name: string;
     price: number;
     imageSrc: string;
     href: string;
     quantity: number;
     color?: string;
-    stock?: number; // máximo disponible — si no se pasa, no se limita
+    stock?: number;
 }
 
 interface CartContextType {
@@ -53,15 +55,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
     }, [items, isLoaded]);
 
-    function addItem(newItem: Omit<CartItem, "quantity">, quantity = 1) {
+    const addItem = useCallback((newItem: Omit<CartItem, "quantity">, quantity = 1) => {
         setItems((prev) => {
             const existing = prev.find((i) => i.id === newItem.id);
             if (existing) {
                 const maxQty = existing.stock ?? Infinity;
-                const nuevaCantidad = Math.min(
-                    existing.quantity + quantity,
-                    maxQty,
-                );
+                const nuevaCantidad = Math.min(existing.quantity + quantity, maxQty);
                 return prev.map((i) =>
                     i.id === newItem.id ? { ...i, quantity: nuevaCantidad } : i,
                 );
@@ -69,13 +68,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
             const maxQty = newItem.stock ?? Infinity;
             return [...prev, { ...newItem, quantity: Math.min(quantity, maxQty) }];
         });
-    }
+    }, []);
 
-    function removeItem(id: string) {
+    const removeItem = useCallback((id: string) => {
         setItems((prev) => prev.filter((i) => i.id !== id));
-    }
+    }, []);
 
-    function updateQuantity(id: string, quantity: number) {
+    const updateQuantity = useCallback((id: string, quantity: number) => {
         if (quantity < 1) return;
         setItems((prev) =>
             prev.map((i) => {
@@ -84,19 +83,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 return { ...i, quantity: Math.min(quantity, maxQty) };
             }),
         );
-    }
+    }, []);
 
-    function clearCart() {
+    const clearCart = useCallback(() => {
         setItems([]);
-    }
+    }, []);
 
-    return (
-        <CartContext.Provider
-            value={{ items, addItem, removeItem, updateQuantity, clearCart }}
-        >
-            {children}
-        </CartContext.Provider>
+    // Estabiliza también el objeto de valor del contexto — sin esto, cada
+    // render de CartProvider crea un objeto nuevo aunque las funciones ya
+    // sean estables, lo cual seguiría causando renders innecesarios en
+    // cualquier componente que use useCart().
+    const value = useMemo(
+        () => ({ items, addItem, removeItem, updateQuantity, clearCart }),
+        [items, addItem, removeItem, updateQuantity, clearCart],
     );
+
+    return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {
